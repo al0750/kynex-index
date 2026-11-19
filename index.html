@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KYNEX · Telemetría de energía cinética</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0F1115;--card:#161920;--bd:#262A34;--tx:#E6E8EE;--mu:#8A91A3;--g:#10B981;--gn:#00E599;--c:#06B6D4;--a:#F59E0B}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.45 'Space Grotesk',Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;min-height:100vh}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:14px clamp(14px,3vw,32px);border-bottom:1px solid var(--bd);background:#0F1115;position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px}.brand b{font-size:20px;letter-spacing:.18em}.brand small{color:var(--mu);font-size:11px;border-left:1px solid var(--bd);padding-left:10px}
+.live{display:flex;align-items:center;gap:8px;color:var(--gn);font-weight:500;font-size:13px}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--gn);box-shadow:0 0 0 0 rgba(0,229,153,.6);animation:pl 2s infinite}
+@keyframes pl{70%{box-shadow:0 0 0 9px rgba(0,229,153,0)}100%{box-shadow:0 0 0 0 rgba(0,229,153,0)}}
+.live span{color:var(--mu);font-weight:400;margin-left:6px}
+.ctl{display:flex;gap:10px;flex-wrap:wrap}
+select,input,button{font:inherit;color:var(--tx);background:#0F1115;border:1px solid var(--bd);border-radius:8px;padding:8px 12px}
+select:focus,input:focus,button:focus-visible{outline:2px solid var(--c);outline-offset:1px}
+button{cursor:pointer;transition:background .15s,border-color .15s}button:hover{border-color:var(--gn)}
+.pri{background:var(--g);border-color:var(--g);color:#04130D;font-weight:600}.pri:hover{background:var(--gn)}
+main{padding:clamp(14px,3vw,32px);display:grid;gap:16px;max-width:1500px;margin:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px}
+.card h2{font-size:15px;font-weight:600;margin-bottom:2px}.mu{color:var(--mu)}.sub{color:var(--mu);font-size:12.5px;margin-bottom:12px}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{display:flex;align-items:center;gap:8px;border:1px solid var(--bd);background:var(--card);border-radius:999px;padding:6px 14px;font-size:13px}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--gn)}.chip.w{border-color:var(--a);color:var(--a)}.chip.w i{background:var(--a)}
+.kpis{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.k{border-top:2px solid var(--ac)}.k label{color:var(--mu);font-size:13px}
+.v{margin:6px 0 4px;display:flex;align-items:baseline;gap:6px}.v b{font-size:34px;font-weight:600;color:var(--ac);letter-spacing:-.02em}.v span{color:var(--mu)}
+.s{font-size:12.5px;min-height:18px}.up{color:var(--gn)}.dn{color:var(--a)}
+.k input,.k select{padding:2px 6px;width:62px;font-size:12px;border-radius:6px}.k select{width:auto}
+.g2{display:grid;gap:16px;grid-template-columns:minmax(300px,1fr) 2fr}
+@media(max-width:900px){.g2{grid-template-columns:1fr}}
+.cw{position:relative;height:300px}
+.viz{width:100%;height:90px;margin:4px 0 8px;background:#0F1115;border:1px solid var(--bd);border-radius:8px}
+#tile{transition:transform .08s}#tile.press{transform:translateY(9px)}
+.gear{transform-box:fill-box;transform-origin:center}.spin{animation:sp .7s ease-out}@keyframes sp{to{transform:rotate(200deg)}}
+.big{width:100%;padding:16px;font-size:17px;border-radius:10px}
+.row{display:flex;align-items:center;gap:10px;margin-top:12px}.row input[type=range]{flex:1;padding:0;accent-color:var(--gn)}
+#cont[data-on="1"]{border-color:var(--a);color:var(--a)}
+.rd{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:12px;font-size:12.5px;border-top:1px solid var(--bd);padding-top:10px}.rd span{color:var(--mu)}.rd b{text-align:right;font-weight:500}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+form label{font-size:11.5px;color:var(--mu);display:grid;gap:3px}form input,form select{width:100%}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--bd)}th{color:var(--mu);font-weight:500;font-size:12.5px;cursor:pointer;user-select:none}th:hover{color:var(--tx)}
+td.n,th.n{text-align:right}tr:hover td{background:#1B1F29}
+.bd{padding:2px 10px;border-radius:999px;font-size:12px;border:1px solid var(--g);color:var(--gn)}.bd.w{border-color:var(--a);color:var(--a)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--gn);padding:10px 18px;border-radius:8px;transition:transform .25s;z-index:9}#toast.on{transform:translateX(-50%)}
+footer{text-align:center;color:var(--mu);font-size:12px;padding:6px 0 28px}footer button{font-size:12px;padding:5px 10px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="6" fill="none" stroke="#00E599" stroke-width="2"/><path d="M11 8v16M11 16l9-8M13.5 14l7.5 10" stroke="#00E599" stroke-width="2.5" fill="none"/></svg>
+    <b>KYNEX</b><small>Pisos de energía cinética</small>
+  </div>
+  <div class="live"><i></i>SISTEMA ACTIVO - MÓDULO CENTRAL 01<span id="clk"></span></div>
+  <div class="ctl">
+    <select id="per" aria-label="Periodo"><option value="hoy">Hoy</option><option value="sem" selected>Esta semana</option><option value="mes">Este mes</option><option value="tot">Histórico total</option></select>
+    <button id="exp" class="pri">Exportar reporte CSV</button>
+  </div>
+</header>
+<main>
+  <section class="chips" id="chips"></section>
+
+  <section class="kpis">
+    <div class="card k" style="--ac:#00E599"><label>Energía total generada</label><div class="v"><b id="v1">0</b><span id="u1"></span></div><div class="s" id="d1"></div><div class="s mu" id="x1"></div></div>
+    <div class="card k" style="--ac:#06B6D4"><label>Pisadas registradas</label><div class="v"><b id="v2">0</b><span>pisadas</span></div><div class="s" id="d2"></div><div class="s mu" id="x2"></div></div>
+    <div class="card k" style="--ac:#00E599"><label>Ahorro económico estimado</label><div class="v"><b id="v3">0</b><span id="u3"></span></div><div class="s" id="d3"></div>
+      <div class="s mu">Tarifa $<input id="tar" type="number" step="0.1" min="0" aria-label="Tarifa por kWh"> MXN/kWh · <select id="cur" aria-label="Moneda"><option>MXN</option><option>USD</option></select></div></div>
+    <div class="card k" style="--ac:#00E599"><label>Huella de carbono evitada</label><div class="v"><b id="v4">0</b><span>kg CO₂</span></div><div class="s" id="d4"></div><div class="s mu" id="x4"></div></div>
+  </section>
+
+  <section class="g2">
+    <div class="card">
+      <h2>Simulador de prueba en vivo</h2>
+      <p class="sub">Cada pisada calcula energía mecánica → tren de engranajes → generador DC.</p>
+      <svg class="viz" viewBox="0 0 220 90" aria-hidden="true">
+        <g id="tile"><rect x="12" y="22" width="110" height="14" rx="3" fill="#262A34" stroke="#00E599"/><path d="M30 36v22M104 36v22" stroke="#8A91A3" stroke-width="2"/></g>
+        <rect x="12" y="62" width="110" height="4" fill="#262A34"/>
+        <circle class="gear" id="g1" cx="152" cy="50" r="22" fill="none" stroke="#06B6D4" stroke-width="6" stroke-dasharray="7 4"/>
+        <circle class="gear" id="g2" cx="192" cy="34" r="12" fill="none" stroke="#00E599" stroke-width="5" stroke-dasharray="5 3"/>
+      </svg>
+      <button class="pri big" id="step">Simular pisada</button>
+      <div class="row"><button id="cont" data-on="0">Iniciar tráfico continuo</button><input id="ppm" type="range" min="5" max="120" value="30" aria-label="Personas por minuto"><b id="ppmv" style="min-width:64px;text-align:right">30/min</b></div>
+      <div class="rd" id="rd"><span>Esperando pisada…</span><b></b></div>
+    </div>
+    <div class="card"><h2>Generación vs. flujo peatonal</h2><p class="sub" id="peak">Potencia media (mW) y pisadas por intervalo</p><div class="cw"><canvas id="c1"></canvas></div></div>
+  </section>
+
+  <section class="g2">
+    <div class="card"><h2>Energía por zona</h2><p class="sub">Distribución en el periodo seleccionado</p><div class="cw"><canvas id="c2"></canvas></div></div>
+    <div class="card">
+      <h2>Bitácora de registro y mantenimiento</h2>
+      <p class="sub">Agrega mediciones reales del prototipo (multímetro) o ordena la tabla por columna.</p>
+      <form id="f">
+        <label>Módulo<select name="mdl" id="fm"></select></label>
+        <label>Pisadas<input name="steps" type="number" min="0" step="1" required value="10"></label>
+        <label>Voltaje pico (V)<input name="v" type="number" min="0" step="0.1" required value="12"></label>
+        <label>Energía (mWh)<input name="mwh" type="number" min="0" step="0.01" required value="10"></label>
+        <label>Estado<select name="st"><option>Óptimo</option><option>Lubricación</option><option>Revisión de engranajes</option></select></label>
+        <label>&nbsp;<button class="pri">Agregar registro</button></label>
+      </form>
+      <div class="tw"><table><thead><tr id="th"></tr></thead><tbody id="tb"></tbody></table></div>
+    </div>
+  </section>
+</main>
+<footer><button id="rst">Restaurar datos de muestra</button><p style="margin-top:8px">Modelo: E = m·g·d·η<sub>engranes</sub>·η<sub>DC</sub> · datos guardados en este navegador</p></footer>
+<div id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s),K='kynex_v1';
+const Z=[{id:'KX-01',n:'Acceso Principal',w:1},{id:'KX-02',n:'Pasillo Central',w:.7},{id:'KX-03',n:'Zona de Torniquetes',w:.5}];
+const P={peso:70,desp:.012,eta:.8*.65};
+const PER={hoy:864e5,sem:7*864e5,mes:30*864e5,tot:0};
+const PROF=[2,1,1,1,2,5,12,30,48,35,28,30,38,45,40,30,34,44,50,34,22,14,8,4];
+let R=[],cfg={tar:3.5,cur:'MXN'},per='sem',sort={k:'ts',d:-1},nid=1,run=null,ch1,ch2,tm,q;
+const pad=n=>String(n).padStart(4,'0'),rid=r=>r.mod+'-'+pad(r.id),dayS=t=>new Date(t).setHours(0,0,0,0);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+function estado(){const r=Math.random();return r<.9?'Óptimo':r<.96?'Lubricación':'Revisión de engranajes'}
+function seed(){
+  const out=[],now=Date.now(),h0=Math.floor(now/36e5)*36e5;let n=1;
+  for(let t=h0-29*24*36e5;t<=h0;t+=36e5){
+    const d=new Date(t),hr=d.getHours(),wk=(d.getDay()%6==0)?.65:1;
+    Z.forEach(z=>{
+      const s=Math.round(PROF[hr]*12*z.w*wk*rnd(.8,1.2));if(!s)return;
+      out.push({id:n++,mod:z.id,ts:Math.min(now,t+Math.floor(Math.random()*36e5)),steps:s,v:+rnd(10,15).toFixed(1),
+        mwh:+(s*P.peso*9.81*P.desp*P.eta/3.6*rnd(.9,1.1)).toFixed(2),st:estado()});
+    });
+  }
+  for(let i=out.length-1;i>=0;i--)if(out[i].mod=='KX-03'){out[i].st='Revisión de engranajes';break}
+  nid=n;return out;
+}
+function load(){
+  try{R=JSON.parse(localStorage[K])}catch(e){}
+  if(!Array.isArray(R)||!R.length)R=seed();
+  try{Object.assign(cfg,JSON.parse(localStorage[K+'c']))}catch(e){}
+  nid=R.reduce((m,r)=>Math.max(m,r.id),0)+1;
+}
+function save(){clearTimeout(tm);tm=setTimeout(()=>{try{localStorage[K]=JSON.stringify(R);localStorage[K+'c']=JSON.stringify(cfg)}catch(e){}},500)}
+const draw=()=>{cancelAnimationFrame(q);q=requestAnimationFrame(render)};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200)}
+
+function win(){
+  const now=Date.now(),L=PER[per];if(!L)return{s:0,e:now,L:0};
+  const s=per=='hoy'?dayS(now):now-L;return{s,e:now,ps:s-L,pe:now-L,L};
+}
+const inR=(s,e)=>R.filter(r=>r.ts>=s&&r.ts<=e);
+const agg=a=>a.reduce((o,r)=>(o.m+=r.mwh,o.s+=r.steps,o),{m:0,s:0});
+const fmtE=m=>m>=1e6?[(m/1e6).toFixed(3),'kWh']:m>=1e3?[(m/1e3).toFixed(2),'Wh']:[m.toFixed(1),'mWh'];
+
+function delta(a,b,B){
+  if(!B)return '<span class="mu">Acumulado desde el inicio</span>';
+  if(!b)return '<span class="mu">Sin periodo previo</span>';
+  const p=(a-b)/b*100;
+  return `<span class="${p>=0?'up':'dn'}">${p>=0?'▲':'▼'} ${Math.abs(p).toFixed(1)}%</span> <span class="mu">vs. periodo anterior</span>`;
+}
+
+function render(){
+  const w=win(),cur=inR(w.s,w.e),A=agg(cur),B=w.L?agg(inR(w.ps,w.pe)):null;
+  const kwh=A.m/1e6,fx=cfg.cur=='USD'?1/18:1,sav=kwh*cfg.tar*fx,co2=kwh*.435;
+  const [e,u]=fmtE(A.m);
+  $('#v1').textContent=e;$('#u1').textContent=u;
+  $('#x1').textContent=`≈ ${(A.m/12000).toFixed(2)} cargas de smartphone`;
+  $('#v2').textContent=A.s.toLocaleString('es-MX');
+  const hh=Array(24).fill(0);cur.forEach(r=>hh[new Date(r.ts).getHours()]+=r.steps);
+  const mx=Math.max(...hh),pk=hh.indexOf(mx);
+  $('#x2').textContent=mx>0?`Hora pico: ${String(pk).padStart(2,'0')}:00 (${mx.toLocaleString('es-MX')})`:'Sin datos';
+  $('#v3').textContent=sav.toFixed(sav<1?4:2);$('#u3').textContent=cfg.cur;
+  $('#v4').textContent=co2.toFixed(co2<1?3:2);
+  $('#x4').textContent=`≈ ${(co2/(21/365)).toFixed(1)} días de absorción de un árbol`;
+  const d=delta(A.m,B&&agg(inR(w.ps,w.pe)).m,B);
+  ['d1','d3','d4'].forEach(i=>$('#'+i).innerHTML=d);
+  $('#d2').innerHTML=delta(A.s,B&&B.s,B);
+  chips();charts(cur,w);table(cur);
+}
+
+function chips(){
+  $('#chips').innerHTML=Z.map(z=>{
+    let s='Sin datos';for(let i=R.length-1;i>=0;i--)if(R[i].mod==z.id){s=R[i].st;break}
+    const w=s!='Óptimo'&&s!='Sin datos';
+    return `<div class="chip ${w?'w':''}"><i></i>${z.id} · ${z.n} — ${s}</div>`;
+  }).join('');
+}
+
+function charts(cur,w){
+  const hr=per=='hoy',pw=[],st=[],lab=[];let n,o;
+  if(hr){n=24;o=0}else{o=dayS(w.L?w.s:(cur[0]?cur[0].ts:Date.now()));n=Math.round((dayS(Date.now())-o)/864e5)+1}
+  for(let i=0;i<n;i++){pw[i]=0;st[i]=0;lab[i]=hr?String(i).padStart(2,'0')+'h':new Date(o+i*864e5).toLocaleDateString('es-MX',{day:'2-digit',month:'short'})}
+  cur.forEach(r=>{const i=hr?new Date(r.ts).getHours():Math.round((dayS(r.ts)-o)/864e5);if(i>=0&&i<n){pw[i]+=r.mwh;st[i]+=r.steps}});
+  const dv=hr?1:24;
+  ch1.data.labels=lab;ch1.data.datasets[0].data=pw.map(v=>+(v/dv).toFixed(2));ch1.data.datasets[1].data=st;ch1.update();
+  ch2.data.datasets[0].data=Z.map(z=>+cur.filter(r=>r.mod==z.id).reduce((s,r)=>s+r.mwh,0).toFixed(1));ch2.update();
+}
+
+const COLS=[['id','ID de módulo'],['ts','Fecha y hora'],['steps','Pisadas','n'],['v','Voltaje pico (V)','n'],['mwh','Energía (mWh)','n'],['st','Estado mecánico']];
+function table(cur){
+  $('#th').innerHTML=COLS.map(([k,l,c])=>`<th data-k="${k}" class="${c||''}">${l}${sort.k==k?(sort.d>0?' ▲':' ▼'):''}</th>`).join('');
+  const k=sort.k,a=[...cur].sort((x,y)=>{const p=k=='id'?rid(x):x[k],r=k=='id'?rid(y):y[k];return(p>r?1:p<r?-1:0)*sort.d}).slice(0,50);
+  $('#tb').innerHTML=a.map(r=>`<tr><td>${rid(r)}</td><td>${new Date(r.ts).toLocaleString('es-MX',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit'})}</td><td class="n">${r.steps}</td><td class="n">${r.v}</td><td class="n">${r.mwh}</td><td><span class="bd ${r.st=='Óptimo'?'':'w'}">${r.st}</span></td></tr>`).join('')||'<tr><td colspan="6" class="mu">Sin registros en este periodo. Usa el simulador o agrega uno manual.</td></tr>';
+}
+
+function add(o){
+  R.push({id:nid++,ts:Date.now(),st:'Óptimo',...o});
+  if(R.length>6000)R.splice(0,R.length-6000);
+  save();draw();
+}
+function step(){
+  const w=P.peso*rnd(.75,1.35),f=w*9.81,Wm=f*P.desp,E=Wm*P.eta*rnd(.9,1.1);
+  return{w,f,Wm,E,mwh:E/3.6,v:+(6+Math.sqrt(E)*3.4*rnd(.92,1.08)).toFixed(1)};
+}
+function pick(){let r=Math.random()*2.2;for(const z of Z){r-=z.w;if(r<=0)return z}return Z[0]}
+function pisada(){
+  const z=pick(),s=step();
+  add({mod:z.id,steps:1,v:s.v,mwh:+s.mwh.toFixed(3)});
+  $('#rd').innerHTML=`<span>Zona</span><b>${z.n}</b><span>Peso / fuerza</span><b>${s.w.toFixed(0)} kg · ${s.f.toFixed(0)} N</b><span>Trabajo mecánico</span><b>${s.Wm.toFixed(2)} J</b><span>Energía eléctrica</span><b>${s.E.toFixed(2)} J</b><span>Energía generada</span><b style="color:var(--gn)">${s.mwh.toFixed(3)} mWh</b><span>Voltaje pico</span><b>${s.v} V</b>`;
+  const t=$('#tile');t.classList.add('press');setTimeout(()=>t.classList.remove('press'),110);
+  ['g1','g2'].forEach(i=>{const g=$('#'+i);g.classList.remove('spin');void g.getBoundingClientRect();g.classList.add('spin')});
+}
+function cont(){
+  clearInterval(run);run=null;
+  if($('#cont').dataset.on=='1')run=setInterval(pisada,60000/+$('#ppm').value);
+}
+
+function init(){
+  load();
+  $('#fm').innerHTML=Z.map(z=>`<option value="${z.id}">${z.id} · ${z.n}</option>`).join('');
+  $('#tar').value=cfg.tar;$('#cur').value=cfg.cur;
+  Chart.defaults.font.family="'Space Grotesk',system-ui,sans-serif";Chart.defaults.color='#8A91A3';
+  const G='#262A34';
+  ch1=new Chart($('#c1'),{type:'line',data:{labels:[],datasets:[
+    {label:'Potencia media (mW)',data:[],borderColor:'#00E599',borderWidth:2,fill:true,tension:.35,pointRadius:0,yAxisID:'y',
+     backgroundColor:c=>{const a=c.chart.chartArea;if(!a)return'rgba(0,229,153,.2)';const g=c.chart.ctx.createLinearGradient(0,a.top,0,a.bottom);g.addColorStop(0,'rgba(0,229,153,.4)');g.addColorStop(1,'rgba(0,229,153,0)');return g}},
+    {label:'Pisadas',data:[],borderColor:'#06B6D4',borderWidth:2,tension:.35,pointRadius:0,yAxisID:'y1'}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{boxWidth:10}}},
+      scales:{x:{grid:{color:G},ticks:{maxTicksLimit:12}},y:{grid:{color:G},beginAtZero:true,ticks:{color:'#00E599'}},y1:{position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{color:'#06B6D4'}}}}});
+  ch2=new Chart($('#c2'),{type:'doughnut',data:{labels:Z.map(z=>z.n),datasets:[{data:[],backgroundColor:['#00E599','#06B6D4','#8B5CF6'],borderColor:'#161920',borderWidth:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{boxWidth:10}}}}});
+
+  $('#per').onchange=e=>{per=e.target.value;render()};
+  $('#tar').onchange=e=>{cfg.tar=Math.max(0,+e.target.value||0);save();render()};
+  $('#cur').onchange=e=>{cfg.cur=e.target.value;save();render()};
+  $('#step').onclick=pisada;
+  $('#cont').onclick=e=>{const b=e.target;b.dataset.on=b.dataset.on=='1'?'0':'1';b.textContent=b.dataset.on=='1'?'Detener tráfico continuo':'Iniciar tráfico continuo';cont()};
+  $('#ppm').oninput=e=>{$('#ppmv').textContent=e.target.value+'/min';if(run)cont()};
+  $('#th').onclick=e=>{const k=e.target.dataset.k;if(!k)return;sort=sort.k==k?{k,d:-sort.d}:{k,d:-1};render()};
+  $('#f').onsubmit=e=>{
+    e.preventDefault();const f=e.target,s=+f.steps.value,v=+f.v.value,m=+f.mwh.value;
+    if(!(s>=0&&v>=0&&m>=0)){toast('Revisa los valores: deben ser números positivos');return}
+    add({mod:f.mdl.value,steps:s,v,mwh:m,st:f.st.value});toast('Registro agregado');
+  };
+  $('#exp').onclick=()=>{
+    const w=win(),rs=inR(w.s,w.e);
+    const rows=[['ID de módulo','Fecha y hora','Pisadas','Voltaje pico (V)','Energía (mWh)','Estado mecánico'],
+      ...rs.map(r=>[rid(r),new Date(r.ts).toLocaleString('es-MX'),r.steps,r.v,r.mwh,r.st])];
+    const csv='\ufeff'+rows.map(r=>r.map(c=>'"'+c+'"').join(',')).join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download='kynex_reporte_'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV exportado ('+rs.length+' registros)');
+  };
+  $('#rst').onclick=()=>{
+    if(!confirm('Se reemplazarán todos los registros por datos de muestra. ¿Continuar?'))return;
+    R=seed();save();render();toast('Datos de muestra restaurados');
+  };
+  setInterval(()=>{$('#clk').textContent=new Date().toLocaleTimeString('es-MX')},1000);
+  setInterval(render,60000);
+  render();
+}
+window.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
